@@ -1,7 +1,20 @@
 import { useEffect, useState, type RefObject } from 'react'
 import type { Blendshapes } from '../lib/expressions'
 
-const KEYS = ['mouthSmileLeft', 'mouthSmileRight', 'jawOpen', 'mouthFunnel', 'browInnerUp', 'eyeBlinkLeft', 'eyeBlinkRight']
+const KEYS = [
+  'mouthSmileLeft',
+  'mouthSmileRight',
+  'jawOpen',
+  'mouthFunnel',
+  'mouthPucker',
+  'mouthFrownLeft',
+  'mouthFrownRight',
+  'browInnerUp',
+  'browDownLeft',
+  'browDownRight',
+  'eyeBlinkLeft',
+  'eyeBlinkRight',
+]
 
 /** Raw blendshape values for calibrating at the booth. Enable with ?debug in the URL. */
 export function DebugReadout({ source }: { source: RefObject<Blendshapes | null> }) {

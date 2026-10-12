@@ -3,7 +3,7 @@
  *
  * Each expression turns MediaPipe face blendshapes (values 0–1) into a
  * playful 0–100 "match" score. To add a new emoji, add one entry to
- * EXPRESSIONS and include its id in GAME_EXPRESSION_IDS.
+ * EXPRESSIONS and include its id in EXPRESSION_POOL.
  *
  * These scores are a game approximation based on facial movements,
  * not a scientific measure of emotion.
@@ -88,23 +88,97 @@ export const EXPRESSIONS: Record<string, ExpressionDefinition> = {
       return toPercent(forgiving(raw))
     },
   },
+
+  wink: {
+    id: 'wink',
+    emoji: '😉',
+    name: 'Wink',
+    hint: 'Close just ONE eye!',
+    score: (b) => {
+      const left = get(b, 'eyeBlinkLeft')
+      const right = get(b, 'eyeBlinkRight')
+      const closed = ramp(Math.max(left, right), 0.3, 0.62)
+      // The other eye must stay open, so closing both eyes doesn't count.
+      const otherOpen = 1 - ramp(Math.min(left, right), 0.3, 0.6)
+      const smile = ramp(avg(get(b, 'mouthSmileLeft'), get(b, 'mouthSmileRight')), 0.05, 0.45)
+      return toPercent(forgiving(closed * otherOpen * 0.9 + closed * otherOpen * smile * 0.1))
+    },
+  },
+
+  kiss: {
+    id: 'kiss',
+    emoji: '😘',
+    name: 'Blow a Kiss',
+    hint: 'Pucker up your lips!',
+    score: (b) => {
+      const pucker = ramp(Math.max(get(b, 'mouthPucker'), get(b, 'mouthFunnel') * 0.7), 0.12, 0.65)
+      const jawPenalty = ramp(get(b, 'jawOpen'), 0.25, 0.5)
+      return toPercent(forgiving(pucker) * (1 - 0.5 * jawPenalty))
+    },
+  },
+
+  angry: {
+    id: 'angry',
+    emoji: '😠',
+    name: 'Angry',
+    hint: 'Scrunch your eyebrows down. Grrr!',
+    score: (b) => {
+      const brows = ramp(avg(get(b, 'browDownLeft'), get(b, 'browDownRight')), 0.05, 0.45)
+      const sneer = ramp(avg(get(b, 'noseSneerLeft'), get(b, 'noseSneerRight')), 0.05, 0.4)
+      const mouth = ramp(
+        Math.max(avg(get(b, 'mouthPressLeft'), get(b, 'mouthPressRight')), avg(get(b, 'mouthFrownLeft'), get(b, 'mouthFrownRight'))),
+        0.05,
+        0.4,
+      )
+      const smile = ramp(avg(get(b, 'mouthSmileLeft'), get(b, 'mouthSmileRight')), 0.2, 0.6)
+      const raw = brows * 0.7 + Math.max(sneer, mouth, brows * 0.6) * 0.3
+      return toPercent(forgiving(raw) * (1 - 0.5 * smile))
+    },
+  },
+
+  sad: {
+    id: 'sad',
+    emoji: '☹️',
+    name: 'Sad Face',
+    hint: 'Frown and look super sad!',
+    score: (b) => {
+      const frown = ramp(avg(get(b, 'mouthFrownLeft'), get(b, 'mouthFrownRight')), 0.03, 0.3)
+      const pout = ramp(get(b, 'mouthShrugLower'), 0.1, 0.5)
+      const brows = ramp(get(b, 'browInnerUp'), 0.1, 0.5)
+      const smile = ramp(avg(get(b, 'mouthSmileLeft'), get(b, 'mouthSmileRight')), 0.15, 0.5)
+      const raw = frown * 0.55 + Math.max(pout, frown * 0.6) * 0.2 + Math.max(brows, frown * 0.5) * 0.25
+      return toPercent(forgiving(raw) * (1 - 0.6 * smile))
+    },
+  },
 }
 
-/** The emojis used in every game (order is shuffled per game). */
-export const GAME_EXPRESSION_IDS = ['happy', 'surprised', 'relieved']
+/** Every emoji that can appear. Each game randomly picks ROUND_COUNT of them. */
+export const EXPRESSION_POOL = ['happy', 'surprised', 'relieved', 'wink', 'kiss', 'angry', 'sad']
 
-export const ROUND_COUNT = GAME_EXPRESSION_IDS.length
+export const ROUND_COUNT = 3
 export const ROUND_DURATION_MS = 5000
 export const MAX_ROUND_POINTS = 100
 export const MAX_TOTAL_POINTS = ROUND_COUNT * MAX_ROUND_POINTS
 
-export function createGameRounds(): ExpressionDefinition[] {
-  const rounds = GAME_EXPRESSION_IDS.map((id) => EXPRESSIONS[id])
-  for (let i = rounds.length - 1; i > 0; i--) {
+let lastPick = ''
+
+function shuffle<T>(items: T[]): T[] {
+  const out = items.slice()
+  for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[rounds[i], rounds[j]] = [rounds[j], rounds[i]]
+    ;[out[i], out[j]] = [out[j], out[i]]
   }
-  return rounds
+  return out
+}
+
+/** Picks a random set of emojis, avoiding an exact repeat of the previous game's set. */
+export function createGameRounds(): ExpressionDefinition[] {
+  let ids = shuffle(EXPRESSION_POOL).slice(0, ROUND_COUNT)
+  for (let tries = 0; tries < 5 && [...ids].sort().join() === lastPick; tries++) {
+    ids = shuffle(EXPRESSION_POOL).slice(0, ROUND_COUNT)
+  }
+  lastPick = [...ids].sort().join()
+  return ids.map((id) => EXPRESSIONS[id])
 }
 
 export function blendshapesFromCategories(categories: { categoryName: string; score: number }[]): Blendshapes {

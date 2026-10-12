@@ -1,5 +1,5 @@
 import { motion, type Variants } from 'motion/react'
-import { EXPRESSIONS, GAME_EXPRESSION_IDS, MAX_TOTAL_POINTS, ROUND_COUNT, ROUND_DURATION_MS } from '../lib/expressions'
+import { EXPRESSIONS, EXPRESSION_POOL, MAX_TOTAL_POINTS, ROUND_COUNT, ROUND_DURATION_MS } from '../lib/expressions'
 import { Attribution, BackgroundOrbs } from './Background'
 
 const container: Variants = {
@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function WelcomeScreen({ onStart, starting }: Props) {
-  const emojis = GAME_EXPRESSION_IDS.map((id) => EXPRESSIONS[id])
+  const emojis = EXPRESSION_POOL.map((id) => EXPRESSIONS[id])
 
   return (
     <div className="az-bg flex h-full flex-col items-center justify-center overflow-hidden px-6 py-8 text-center">
@@ -37,12 +37,12 @@ export function WelcomeScreen({ onStart, starting }: Props) {
           Can You Match the Face?
         </motion.p>
 
-        <motion.div variants={item} className="my-[min(5vh,2.5rem)] flex items-end justify-center gap-[clamp(1.5rem,6vw,5rem)]">
+        <motion.div variants={item} className="my-[min(5vh,2.5rem)] flex flex-wrap items-end justify-center gap-x-[clamp(0.75rem,3vw,2.75rem)] gap-y-3">
           {emojis.map((e, i) => (
             <span key={e.id} className="relative flex flex-col items-center">
               <span
-                className="emoji animate-float inline-block text-[clamp(4rem,min(11vw,16vh),9rem)] drop-shadow-[0_18px_28px_rgba(0,0,0,0.45)]"
-                style={{ animationDelay: `${i * -1.1}s` }}
+                className="emoji animate-float inline-block text-[clamp(2.75rem,min(8vw,12vh),6.5rem)] drop-shadow-[0_18px_28px_rgba(0,0,0,0.45)]"
+                style={{ animationDelay: `${i * -0.7}s`, animationDuration: `${3 + (i % 3) * 0.4}s` }}
                 aria-hidden
               >
                 {e.emoji}

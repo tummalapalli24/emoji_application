@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
 import type { FaceLandmarker } from '@mediapipe/tasks-vision'
 import { MAX_TOTAL_POINTS, ROUND_DURATION_MS, type ExpressionDefinition } from '../lib/expressions'
@@ -11,6 +11,7 @@ import { RoundTimer } from './RoundTimer'
 import { TotalScore } from './TotalScore'
 import { CountdownOverlay, RoundTransition } from './RoundTransition'
 import { PointsPopup } from './PointsPopup'
+import { PauseOverlay } from './PauseOverlay'
 import { Attribution } from './Background'
 import { DebugReadout } from './DebugReadout'
 import { DEBUG_ENABLED } from '../lib/debug'
@@ -27,9 +28,10 @@ interface Props {
   landmarker: FaceLandmarker
   rounds: ExpressionDefinition[]
   onComplete: (scores: number[]) => void
+  onQuit: () => void
 }
 
-export function GameScreen({ stream, landmarker, rounds, onComplete }: Props) {
+export function GameScreen({ stream, landmarker, rounds, onComplete, onQuit }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [phase, setPhase] = useState<Phase>('countdown')
@@ -38,6 +40,7 @@ export function GameScreen({ stream, landmarker, rounds, onComplete }: Props) {
   const [showGo, setShowGo] = useState(false)
   const [startedAt, setStartedAt] = useState<number | null>(null)
   const [scores, setScores] = useState<number[]>([])
+  const [paused, setPaused] = useState(false)
   const scoresRef = useRef<number[]>([])
 
   const expression = rounds[round]
@@ -46,13 +49,47 @@ export function GameScreen({ stream, landmarker, rounds, onComplete }: Props) {
     canvasRef,
     landmarker,
     expression,
-    recording: phase === 'playing',
+    recording: phase === 'playing' && !paused,
   })
   const { ready, resetRound, getBestScore } = tracker
+
+  const pause = useCallback(() => {
+    setPaused(true)
+    setStartedAt(null)
+    setShowGo(false)
+    sounds.click()
+  }, [])
+
+  // Resuming re-enters the current phase from the start; a round that was in
+  // progress gets a fresh 3-2-1 so the player isn't dropped straight into it.
+  const resume = useCallback(() => {
+    if (phase === 'playing') setPhase('countdown')
+    setPaused(false)
+    sounds.click()
+  }, [phase])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' && e.key.toLowerCase() !== 'p') return
+      e.preventDefault()
+      if (paused) resume()
+      else pause()
+    }
+    const onHidden = () => {
+      if (document.hidden && !paused) pause()
+    }
+    window.addEventListener('keydown', onKey)
+    document.addEventListener('visibilitychange', onHidden)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.removeEventListener('visibilitychange', onHidden)
+    }
+  }, [paused, pause, resume])
 
   // Single state machine: each phase schedules exactly one transition and
   // clears its timers on exit, so rounds can never overlap or double-score.
   useEffect(() => {
+    if (paused) return
     const timers: number[] = []
     const after = (ms: number, fn: () => void) => timers.push(window.setTimeout(fn, ms))
 
@@ -97,10 +134,10 @@ export function GameScreen({ stream, landmarker, rounds, onComplete }: Props) {
     }
 
     return () => timers.forEach((t) => window.clearTimeout(t))
-  }, [phase, round, ready, rounds.length, resetRound, getBestScore, onComplete])
+  }, [phase, round, ready, paused, rounds.length, resetRound, getBestScore, onComplete])
 
   const total = scores.reduce((a, s) => a + (s ?? 0), 0)
-  const countdownValue = phase === 'countdown' && ready ? String(count) : phase === 'playing' && showGo ? 'GO!' : null
+  const countdownValue = paused ? null : phase === 'countdown' && ready ? String(count) : phase === 'playing' && showGo ? 'GO!' : null
 
   return (
     <div className="az-bg flex h-full flex-col gap-3 p-3 md:gap-5 md:p-6">
@@ -132,7 +169,23 @@ export function GameScreen({ stream, landmarker, rounds, onComplete }: Props) {
           </p>
           <Attribution className="mt-0.5 text-[0.65rem]! tracking-[0.14em]" />
         </div>
-        <TotalScore total={total} max={MAX_TOTAL_POINTS} />
+        <div className="flex items-center gap-3">
+          <TotalScore total={total} max={MAX_TOTAL_POINTS} />
+          <button
+            type="button"
+            onClick={pause}
+            disabled={paused}
+            aria-label="Pause game"
+            title="Pause (P or Esc)"
+            className="surface font-display flex h-full items-center gap-2 self-stretch rounded-2xl px-4 text-lg text-white/85 transition hover:border-az-red hover:text-white active:scale-95 focus-visible:outline-2 focus-visible:outline-white disabled:opacity-50 md:px-5 md:text-xl"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <rect x="6" y="4" width="4" height="16" rx="1" />
+              <rect x="14" y="4" width="4" height="16" rx="1" />
+            </svg>
+            <span className="hidden md:inline">PAUSE</span>
+          </button>
+        </div>
       </header>
 
       <main className="grid min-h-0 flex-1 grid-cols-2 grid-rows-[auto_minmax(0,1fr)] gap-3 [grid-template-areas:'target_meter'_'camera_camera'] md:gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.75fr)_minmax(0,0.8fr)] lg:grid-rows-1 lg:[grid-template-areas:'target_camera_meter']">
@@ -148,7 +201,7 @@ export function GameScreen({ stream, landmarker, rounds, onComplete }: Props) {
           <LiveScoreMeter
             score={phase === 'reveal' ? (scores[round] ?? 0) : tracker.live}
             best={phase === 'reveal' ? (scores[round] ?? 0) : tracker.best}
-            active={phase === 'playing' || phase === 'reveal'}
+            active={!paused && (phase === 'playing' || phase === 'reveal')}
             faceVisible={tracker.faceVisible}
           />
         </div>
@@ -160,10 +213,11 @@ export function GameScreen({ stream, landmarker, rounds, onComplete }: Props) {
 
       <AnimatePresence>
         {countdownValue && <CountdownOverlay key="countdown" value={countdownValue} />}
-        {phase === 'reveal' && <PointsPopup key={`points-${round}`} points={scores[round] ?? 0} />}
-        {phase === 'transition' && (
+        {!paused && phase === 'reveal' && <PointsPopup key={`points-${round}`} points={scores[round] ?? 0} />}
+        {!paused && phase === 'transition' && (
           <RoundTransition key={`transition-${round}`} roundNumber={round + 1} totalRounds={rounds.length} expression={expression} />
         )}
+        {paused && <PauseOverlay key="pause" onResume={resume} onQuit={onQuit} />}
       </AnimatePresence>
     </div>
   )

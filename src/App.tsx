@@ -103,6 +103,13 @@ export default function App() {
     sounds.fanfare()
   }, [])
 
+  const handleQuit = useCallback(() => {
+    sounds.click()
+    setScores([])
+    setStream(null)
+    setScreen('welcome')
+  }, [])
+
   // Release the camera whenever the stream is replaced, cleared, or the page closes.
   useEffect(() => {
     if (!stream) return
@@ -134,7 +141,10 @@ export default function App() {
         {screen === 'game' &&
           stream &&
           landmarker &&
-          page(`game-${gameId}`, <GameScreen stream={stream} landmarker={landmarker} rounds={rounds} onComplete={handleComplete} />)}
+          page(
+            `game-${gameId}`,
+            <GameScreen stream={stream} landmarker={landmarker} rounds={rounds} onComplete={handleComplete} onQuit={handleQuit} />,
+          )}
         {screen === 'results' &&
           page('results', <ResultsScreen rounds={rounds} scores={scores} onPlayAgain={startGame} starting={startup !== null} />)}
       </AnimatePresence>

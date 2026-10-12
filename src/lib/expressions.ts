@@ -1,8 +1,8 @@
 /**
  * Emoji expression registry.
  *
- * Each expression turns MediaPipe face blendshapes (values 0–1) into a
- * playful 0–100 "match" score. To add a new emoji, add one entry to
+ * Each expression turns MediaPipe face blendshapes (values 0 to 1) into a
+ * playful 0 to 100 "match" score. To add a new emoji, add one entry to
  * EXPRESSIONS and include its id in EXPRESSION_POOL.
  *
  * These scores are a game approximation based on facial movements,

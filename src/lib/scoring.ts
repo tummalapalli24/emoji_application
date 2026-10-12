@@ -54,7 +54,7 @@ export function performanceMessage(total: number, max: number) {
   if (pct >= 0.75) return { title: 'EXPRESSION EXPERT!', subtitle: 'The AI could read you like a book.' }
   if (pct >= 0.55) return { title: 'FACE ACE!', subtitle: 'Great matching! Can you beat it next time?' }
   if (pct >= 0.3) return { title: 'NICE MOVES!', subtitle: 'Go bigger with your expressions to score more!' }
-  return { title: 'WARMING UP!', subtitle: 'Exaggerate each face — the AI loves drama!' }
+  return { title: 'WARMING UP!', subtitle: 'Exaggerate each face. The AI loves drama!' }
 }
 
 export function roundReaction(points: number) {

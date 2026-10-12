@@ -99,7 +99,7 @@ export function ResultsScreen({ rounds, scores, onPlayAgain, starting }: Props) 
       </motion.button>
 
       <p className="mt-4 max-w-2xl text-sm font-semibold text-cloud/60 md:text-base">
-        🤖 How it worked: the AI tracked 478 points on your face and measured movements like smiling, jaw opening, and blinking —
+        🤖 How it worked: the AI tracked 478 points on your face and measured movements like smiling, jaw opening, and blinking,
         all right here in your browser.
       </p>
       <Attribution className="mt-3 text-[0.65rem]! md:text-xs!" />

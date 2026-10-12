@@ -33,7 +33,7 @@ export function DebugReadout({ source }: { source: RefObject<Blendshapes | null>
           <span className="h-1.5 w-20 overflow-hidden rounded bg-white/10">
             <span className="block h-full bg-az-red" style={{ width: `${(values?.[k] ?? 0) * 100}%` }} />
           </span>
-          <span className="w-10 text-right tabular-nums">{values ? (values[k] ?? 0).toFixed(2) : '–'}</span>
+          <span className="w-10 text-right tabular-nums">{values ? (values[k] ?? 0).toFixed(2) : '-'}</span>
         </div>
       ))}
     </div>

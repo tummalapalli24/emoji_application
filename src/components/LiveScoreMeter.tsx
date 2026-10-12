@@ -59,7 +59,7 @@ export function LiveScoreMeter({ score, best, active, faceVisible }: Props) {
           <span className="font-display -mt-1 text-xs text-cloud/60 md:text-sm">/ 100</span>
         </div>
       </div>
-      <p className="font-display h-7 text-center text-sm text-white md:text-base xl:text-xl">{faceVisible ? encouragement(shown) : '—'}</p>
+      <p className="font-display h-7 text-center text-sm text-white md:text-base xl:text-xl">{faceVisible ? encouragement(shown) : 'NO FACE'}</p>
       <div
         className={`rounded-full border border-az-red/70 bg-az-red/25 px-4 py-1.5 text-sm font-extrabold tracking-wide text-white transition-opacity xl:text-base ${active ? 'opacity-100' : 'opacity-0'}`}
       >

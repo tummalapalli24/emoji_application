@@ -1,7 +1,7 @@
 import { motion } from 'motion/react'
 import { roundReaction } from '../lib/scoring'
 
-/** Deterministic 0–1 jitter so the burst looks random but renders stably. */
+/** Deterministic 0 to 1 jitter so the burst looks random but renders stably. */
 const jitter = (i: number, salt: number) => {
   const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453
   return x - Math.floor(x)

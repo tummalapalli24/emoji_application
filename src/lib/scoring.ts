@@ -64,3 +64,19 @@ export function roundReaction(points: number) {
   if (points > 0) return 'GOOD TRY!'
   return 'NO FACE FOUND'
 }
+
+export function speedReaction(ms: number) {
+  if (ms < 1000) return 'LIGHTNING FAST!'
+  if (ms < 2000) return 'SUPER SPEEDY!'
+  if (ms < 4000) return 'NICE AND QUICK!'
+  return 'GOT IT!'
+}
+
+/** Results-screen message for timed modes, based on average seconds per round. */
+export function timeMessage(totalMs: number, rounds: number) {
+  const avg = totalMs / rounds / 1000
+  if (avg < 1.5) return { title: 'SPEED DEMON!', subtitle: 'Faster than the AI can blink. Incredible!' }
+  if (avg < 3) return { title: 'QUICK FACE!', subtitle: 'Seriously fast. Can anyone beat that?' }
+  if (avg < 6) return { title: 'NICE RUN!', subtitle: 'Go bigger with each face to shave off time!' }
+  return { title: 'YOU DID IT!', subtitle: 'Practice makes perfect. Try again!' }
+}

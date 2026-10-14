@@ -11,6 +11,20 @@ Everything runs in the browser. Camera frames are analyzed on the device and are
 3. After a 3-2-1 countdown, hold the expression for 5 seconds. Your best *sustained* match counts, so a one-frame twitch won't win the round.
 4. Each round is worth up to 100 points, for a maximum of 300.
 
+### Game modes
+
+| Mode | Players | How it works |
+| --- | --- | --- |
+| **Classic** | 1 | The original: 3 rounds, 5 seconds each, up to 300 points. |
+| **Speed Run** | 1 | The emoji is hidden until GO. Hit a 75 match to stop the clock. Each round caps at 12 seconds, and the fastest total time wins. |
+| **Mystery Face** | 1 | The target emoji is secret. A hot/cold meter says WARMER or COLDER as you try faces. A clue appears after 8 seconds and the emoji's name after 16. Hit a 70 match to solve it (25 second cap per round). |
+| **Face-Off** | 2 | Two players share one camera, side by side. Both make the same face at once, and the higher match wins each round. Player 1 is on the left of the screen. |
+| **Team Relay** | 2 teams | Red vs Blue, 2 players each. Players take turns at the camera (Red, Blue, Red, Blue), and each team pair gets the same emoji so it's fair. Highest team total wins. |
+
+### Leaderboards
+
+Classic (highest score), Speed Run, and Mystery Face (fastest time) each keep a top 10. A score that makes the board asks for 3-letter initials, so no real names are needed. Boards are stored only in this browser's `localStorage`. To reset them between events, open **Leaderboards** on the start screen and hold **Hold 3s to clear all scores**.
+
 ### Controls
 
 | Control | What it does |
@@ -18,6 +32,7 @@ Everything runs in the browser. Camera frames are analyzed on the device and are
 | **Pause** button, or `P` / `Esc` | Pauses the game. The game also pauses automatically if the tab is hidden. |
 | **Resume** | Continues the game. A round that was in progress restarts with a fresh countdown, and finished rounds are kept. |
 | **End Game** | Returns to the start screen without saving the score and turns off the camera. |
+| **X-Ray** button, or `X` | Shows the live face measurements the AI uses for the current emoji (one-player modes, not Mystery Face). |
 | Speaker icon | Toggles sound effects (muted by default). |
 | Expand icon | Toggles fullscreen, which works well on a projector or event display. |
 
@@ -57,7 +72,7 @@ These scores are a game approximation of facial movement, not a scientific measu
 
 ### Adding a new emoji
 
-1. Add an entry to `EXPRESSIONS` in `src/lib/expressions.ts` with an `id`, `emoji`, `name`, `hint`, and `score` function.
+1. Add an entry to `EXPRESSIONS` in `src/lib/expressions.ts` with an `id`, `emoji`, `name`, `hint`, `mysteryHint`, `signals` (for the X-Ray panel), and `score` function.
 2. Add its `id` to `EXPRESSION_POOL`.
 
 To tune thresholds, open the game with `?debug` in the URL (for example `http://localhost:5173/?debug`). This shows live blendshape values over the camera preview.
@@ -68,14 +83,20 @@ To tune thresholds, open the game with `?debug` in the URL (for example `http://
 src/
   App.tsx                 Screen flow, camera and model startup, sound
   components/
-    WelcomeScreen.tsx     Start screen
-    GameScreen.tsx        Round state machine (countdown, playing, reveal, transition) and pause logic
+    WelcomeScreen.tsx     Start screen and mode picker
+    GameScreen.tsx        Round state machine (countdown, playing, reveal, transition) and pause logic for every mode
     PauseOverlay.tsx      Pause menu
-    ResultsScreen.tsx     Final score and per-round breakdown
-    ...                   Timer, score meter, camera preview, overlays
+    ResultsScreen.tsx     Final score, per-round breakdown, and leaderboard entry
+    LeaderboardModal.tsx  All leaderboards, with hold-to-clear
+    MysteryPanel.tsx      Hidden target and timed clues for Mystery Face
+    HotColdMeter.tsx      Warmer/colder hints
+    XRayPanel.tsx         Live view of the face measurements being scored
+    ...                   Timers, score meters, camera preview, overlays
   hooks/
-    useExpressionTracker.ts   Runs face detection on every video frame
+    useExpressionTracker.ts   Runs face detection on every video frame (1 or 2 faces)
   lib/
+    modes.ts              Game mode rules (players, round end, hidden target, leaderboard)
+    leaderboard.ts        Local top 10 storage
     expressions.ts        Emoji definitions and scoring functions
     scoring.ts            Sustained-score tracking and result messages
     faceModel.ts          Loads the MediaPipe model

@@ -6,6 +6,8 @@ interface Props {
   /** True while the round is counting points. */
   active: boolean
   faceVisible: boolean
+  /** Speed Run: score that stops the clock, drawn as a marker on the ring. */
+  target?: number
 }
 
 const WHITE = [255, 255, 255]
@@ -25,7 +27,7 @@ function encouragement(score: number) {
   return 'GO BIGGER!'
 }
 
-export function LiveScoreMeter({ score, best, active, faceVisible }: Props) {
+export function LiveScoreMeter({ score, best, active, faceVisible, target }: Props) {
   const shown = useAnimatedNumber(score, 250)
   const stroke = scoreColor(shown)
   const radius = 84
@@ -53,6 +55,17 @@ export function LiveScoreMeter({ score, best, active, faceVisible }: Props) {
             strokeDasharray={circumference}
             strokeDashoffset={offset}
           />
+          {target !== undefined && (
+            <line
+              x1={100 + 70 * Math.cos((2 * Math.PI * target) / 100)}
+              y1={100 + 70 * Math.sin((2 * Math.PI * target) / 100)}
+              x2={100 + 98 * Math.cos((2 * Math.PI * target) / 100)}
+              y2={100 + 98 * Math.sin((2 * Math.PI * target) / 100)}
+              stroke="white"
+              strokeWidth="5"
+              strokeLinecap="round"
+            />
+          )}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-display text-5xl text-white tabular-nums md:text-6xl xl:text-7xl">{shown}</span>
@@ -63,7 +76,13 @@ export function LiveScoreMeter({ score, best, active, faceVisible }: Props) {
       <div
         className={`rounded-full border border-az-red/70 bg-az-red/25 px-4 py-1.5 text-sm font-extrabold tracking-wide text-white transition-opacity xl:text-base ${active ? 'opacity-100' : 'opacity-0'}`}
       >
-        BEST: <span className="tabular-nums">{best}</span>
+        {target !== undefined ? (
+          <>HIT {target} TO STOP THE CLOCK</>
+        ) : (
+          <>
+            BEST: <span className="tabular-nums">{best}</span>
+          </>
+        )}
       </div>
     </section>
   )

@@ -5,13 +5,16 @@ interface Props {
   stream: MediaStream
   videoRef: RefObject<HTMLVideoElement | null>
   canvasRef: RefObject<HTMLCanvasElement | null>
-  faceVisible: boolean
+  /** Whether each player's face is visible. Two entries switch to the Face-Off split view. */
+  faces: boolean[]
   ready: boolean
   children?: ReactNode
 }
 
 /** Large mirrored webcam view with the AI landmark overlay. */
-export function CameraPreview({ stream, videoRef, canvasRef, faceVisible, ready, children }: Props) {
+export function CameraPreview({ stream, videoRef, canvasRef, faces, ready, children }: Props) {
+  const faceVisible = faces.some(Boolean)
+  const split = faces.length === 2
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
@@ -33,15 +36,31 @@ export function CameraPreview({ stream, videoRef, canvasRef, faceVisible, ready,
       <video ref={videoRef} className="absolute inset-0 h-full w-full -scale-x-100 object-cover" playsInline muted autoPlay />
       <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full -scale-x-100" />
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3 md:p-4">
-        <span className="flex items-center gap-2 rounded-full bg-az-night/70 px-3 py-1.5 text-xs font-extrabold tracking-wider text-white backdrop-blur md:text-sm">
-          <span className={`h-2.5 w-2.5 rounded-full ${faceVisible ? 'animate-pulse bg-az-red shadow-[0_0_10px_#ab0520]' : 'bg-cloud/50'}`} />
-          {faceVisible ? 'AI SEES YOU' : 'LOOKING FOR A FACE…'}
-        </span>
-        <span className="hidden rounded-full bg-az-night/70 px-3 py-1.5 text-xs font-bold text-cloud/75 backdrop-blur md:block">
-          🔒 Processed on this device only
-        </span>
-      </div>
+      {split ? (
+        <>
+          <div className="pointer-events-none absolute inset-y-6 left-1/2 w-0 border-l-2 border-dashed border-white/40" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3 md:p-4">
+            {(['PLAYER 1', 'PLAYER 2'] as const).map((label, i) => (
+              <span
+                key={label}
+                className={`font-display flex items-center gap-2 rounded-full px-3 py-1.5 text-xs text-white md:text-sm ${i === 0 ? 'bg-az-red' : 'bg-azurite'}`}
+              >
+                {label} {faces[i] ? '✓' : '· SHOW FACE'}
+              </span>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3 md:p-4">
+          <span className="flex items-center gap-2 rounded-full bg-az-night/70 px-3 py-1.5 text-xs font-extrabold tracking-wider text-white backdrop-blur md:text-sm">
+            <span className={`h-2.5 w-2.5 rounded-full ${faceVisible ? 'animate-pulse bg-az-red shadow-[0_0_10px_#ab0520]' : 'bg-cloud/50'}`} />
+            {faceVisible ? 'AI SEES YOU' : 'LOOKING FOR A FACE…'}
+          </span>
+          <span className="hidden rounded-full bg-az-night/70 px-3 py-1.5 text-xs font-bold text-cloud/75 backdrop-blur md:block">
+            🔒 Processed on this device only
+          </span>
+        </div>
+      )}
 
       <AnimatePresence>
         {ready && !faceVisible && (
@@ -54,8 +73,10 @@ export function CameraPreview({ stream, videoRef, canvasRef, faceVisible, ready,
           >
             <motion.div initial={{ scale: 0.7 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 18 }} className="text-center">
               <div className="emoji animate-float text-7xl md:text-8xl">🙈</div>
-              <p className="font-display red-glow-text mt-3 text-3xl text-white md:text-5xl">SHOW YOUR FACE!</p>
-              <p className="mt-2 text-base font-bold text-cloud md:text-lg">Look at the camera and get in the frame</p>
+              <p className="font-display red-glow-text mt-3 text-3xl text-white md:text-5xl">{split ? 'SHOW YOUR FACES!' : 'SHOW YOUR FACE!'}</p>
+              <p className="mt-2 text-base font-bold text-cloud md:text-lg">
+                {split ? 'Player 1 on the left, Player 2 on the right' : 'Look at the camera and get in the frame'}
+              </p>
             </motion.div>
           </motion.div>
         )}

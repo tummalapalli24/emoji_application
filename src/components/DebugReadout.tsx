@@ -17,11 +17,14 @@ const KEYS = [
 ]
 
 /** Raw blendshape values for calibrating at the booth. Enable with ?debug in the URL. */
-export function DebugReadout({ source }: { source: RefObject<Blendshapes | null> }) {
+export function DebugReadout({ source }: { source: RefObject<(Blendshapes | null)[]> }) {
   const [values, setValues] = useState<Blendshapes | null>(null)
 
   useEffect(() => {
-    const id = window.setInterval(() => setValues(source.current ? { ...source.current } : null), 120)
+    const id = window.setInterval(() => {
+      const latest = source.current[0]
+      setValues(latest ? { ...latest } : null)
+    }, 120)
     return () => window.clearInterval(id)
   }, [source])
 

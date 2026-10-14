@@ -20,6 +20,10 @@ export interface ExpressionDefinition {
   name: string
   /** Short, kid-friendly hint shown under the target emoji. */
   hint: string
+  /** Clue for Mystery Face mode that doesn't name the emoji. */
+  mysteryHint: string
+  /** Blendshapes shown in the AI X-Ray panel, with friendly labels. */
+  signals: { key: string; label: string }[]
   /** Returns a match score from 0 to 100. */
   score: (b: Blendshapes) => number
 }
@@ -44,6 +48,11 @@ export const EXPRESSIONS: Record<string, ExpressionDefinition> = {
     emoji: '😀',
     name: 'Big Smile',
     hint: 'Smile as wide as you can!',
+    mysteryHint: 'Clue: it’s all about the corners of your mouth.',
+    signals: [
+      { key: 'mouthSmileLeft', label: 'Smile (left side)' },
+      { key: 'mouthSmileRight', label: 'Smile (right side)' },
+    ],
     score: (b) => {
       const left = get(b, 'mouthSmileLeft')
       const right = get(b, 'mouthSmileRight')
@@ -59,6 +68,12 @@ export const EXPRESSIONS: Record<string, ExpressionDefinition> = {
     emoji: '😮',
     name: 'Surprised',
     hint: 'Drop your jaw and make an "O"!',
+    mysteryHint: 'Clue: open wide and raise those eyebrows.',
+    signals: [
+      { key: 'jawOpen', label: 'Jaw open' },
+      { key: 'browInnerUp', label: 'Eyebrows up' },
+      { key: 'mouthFunnel', label: '"O" mouth shape' },
+    ],
     score: (b) => {
       const jaw = ramp(get(b, 'jawOpen'), 0.05, 0.42)
       const oShape = ramp(Math.max(get(b, 'mouthFunnel'), get(b, 'mouthPucker') * 0.6), 0.03, 0.3)
@@ -79,6 +94,11 @@ export const EXPRESSIONS: Record<string, ExpressionDefinition> = {
     emoji: '😌',
     name: 'Eyes Closed',
     hint: 'Close both eyes and relax!',
+    mysteryHint: 'Clue: it uses BOTH of your eyes.',
+    signals: [
+      { key: 'eyeBlinkLeft', label: 'Left eye closed' },
+      { key: 'eyeBlinkRight', label: 'Right eye closed' },
+    ],
     score: (b) => {
       const left = ramp(get(b, 'eyeBlinkLeft'), 0.28, 0.62)
       const right = ramp(get(b, 'eyeBlinkRight'), 0.28, 0.62)
@@ -94,6 +114,11 @@ export const EXPRESSIONS: Record<string, ExpressionDefinition> = {
     emoji: '😉',
     name: 'Wink',
     hint: 'Close just ONE eye!',
+    mysteryHint: 'Clue: your eyes don’t match.',
+    signals: [
+      { key: 'eyeBlinkLeft', label: 'Left eye closed' },
+      { key: 'eyeBlinkRight', label: 'Right eye closed' },
+    ],
     score: (b) => {
       const left = get(b, 'eyeBlinkLeft')
       const right = get(b, 'eyeBlinkRight')
@@ -110,6 +135,11 @@ export const EXPRESSIONS: Record<string, ExpressionDefinition> = {
     emoji: '😘',
     name: 'Blow a Kiss',
     hint: 'Pucker up your lips!',
+    mysteryHint: 'Clue: think about your lips. Mwah?',
+    signals: [
+      { key: 'mouthPucker', label: 'Lips puckered' },
+      { key: 'jawOpen', label: 'Jaw open (keep it low)' },
+    ],
     score: (b) => {
       const pucker = ramp(Math.max(get(b, 'mouthPucker'), get(b, 'mouthFunnel') * 0.7), 0.12, 0.65)
       const jawPenalty = ramp(get(b, 'jawOpen'), 0.25, 0.5)
@@ -122,6 +152,12 @@ export const EXPRESSIONS: Record<string, ExpressionDefinition> = {
     emoji: '😠',
     name: 'Angry',
     hint: 'Scrunch your eyebrows down. Grrr!',
+    mysteryHint: 'Clue: pull your eyebrows DOWN.',
+    signals: [
+      { key: 'browDownLeft', label: 'Eyebrows down' },
+      { key: 'noseSneerLeft', label: 'Nose scrunch' },
+      { key: 'mouthPressLeft', label: 'Lips pressed' },
+    ],
     score: (b) => {
       const brows = ramp(avg(get(b, 'browDownLeft'), get(b, 'browDownRight')), 0.05, 0.45)
       const sneer = ramp(avg(get(b, 'noseSneerLeft'), get(b, 'noseSneerRight')), 0.05, 0.4)
@@ -141,6 +177,11 @@ export const EXPRESSIONS: Record<string, ExpressionDefinition> = {
     emoji: '☹️',
     name: 'Sad Face',
     hint: 'Frown and look super sad!',
+    mysteryHint: 'Clue: turn that smile upside down.',
+    signals: [
+      { key: 'mouthFrownLeft', label: 'Frown' },
+      { key: 'browInnerUp', label: 'Worried eyebrows' },
+    ],
     score: (b) => {
       const frown = ramp(avg(get(b, 'mouthFrownLeft'), get(b, 'mouthFrownRight')), 0.03, 0.3)
       const pout = ramp(get(b, 'mouthShrugLower'), 0.1, 0.5)
@@ -171,11 +212,11 @@ function shuffle<T>(items: T[]): T[] {
   return out
 }
 
-/** Picks a random set of emojis, avoiding an exact repeat of the previous game's set. */
-export function createGameRounds(): ExpressionDefinition[] {
-  let ids = shuffle(EXPRESSION_POOL).slice(0, ROUND_COUNT)
+/** Picks `count` different random emojis, avoiding an exact repeat of the previous game's set. */
+export function pickExpressions(count = ROUND_COUNT): ExpressionDefinition[] {
+  let ids = shuffle(EXPRESSION_POOL).slice(0, count)
   for (let tries = 0; tries < 5 && [...ids].sort().join() === lastPick; tries++) {
-    ids = shuffle(EXPRESSION_POOL).slice(0, ROUND_COUNT)
+    ids = shuffle(EXPRESSION_POOL).slice(0, count)
   }
   lastPick = [...ids].sort().join()
   return ids.map((id) => EXPRESSIONS[id])

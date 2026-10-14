@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { FaceLandmarker } from '@mediapipe/tasks-vision'
-import { createGameRounds, type ExpressionDefinition } from './lib/expressions'
+import { MODES, type ModeId, type RoundResult, type RoundSpec } from './lib/modes'
 import { CameraError, startCamera, stopCamera } from './lib/camera'
-import { loadFaceLandmarker } from './lib/faceModel'
+import { loadFaceLandmarker, setTrackedFaces } from './lib/faceModel'
 import { setMuted as setSoundMuted, sounds } from './lib/sound'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { GameScreen } from './components/GameScreen'
@@ -24,11 +24,14 @@ export default function App() {
   const [startup, setStartup] = useState<Startup | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [landmarker, setLandmarker] = useState<FaceLandmarker | null>(null)
-  const [rounds, setRounds] = useState<ExpressionDefinition[]>(() => createGameRounds())
-  const [scores, setScores] = useState<number[]>([])
+  const [modeId, setModeId] = useState<ModeId>('classic')
+  const [rounds, setRounds] = useState<RoundSpec[]>([])
+  const [results, setResults] = useState<RoundResult[]>([])
   const [gameId, setGameId] = useState(0)
   const [muted, setMuted] = useState(true)
   const attempt = useRef(0)
+  const pendingMode = useRef<ModeId>('classic')
+  const mode = MODES[modeId]
 
   const toggleMute = () => {
     const next = !muted
@@ -37,8 +40,9 @@ export default function App() {
     if (!next) sounds.click()
   }
 
-  const startGame = useCallback(async () => {
+  const startGame = useCallback(async (nextMode: ModeId) => {
     const id = ++attempt.current
+    pendingMode.current = nextMode
     sounds.click()
     setStartup({ camera: 'pending', model: 'pending', error: null })
 
@@ -46,10 +50,15 @@ export default function App() {
       if (id === attempt.current) setStartup((st) => st && { ...st, camera: 'done' })
       return s
     })
-    const modelTask = loadFaceLandmarker().then((m) => {
-      if (id === attempt.current) setStartup((st) => st && { ...st, model: 'done' })
-      return m
-    })
+    const modelTask = loadFaceLandmarker()
+      .then(async (m) => {
+        await setTrackedFaces(m, MODES[nextMode].players)
+        return m
+      })
+      .then((m) => {
+        if (id === attempt.current) setStartup((st) => st && { ...st, model: 'done' })
+        return m
+      })
     const [cam, model] = await Promise.allSettled([cameraTask, modelTask])
 
     if (id !== attempt.current) {
@@ -83,8 +92,9 @@ export default function App() {
 
     setStream(cam.value)
     setLandmarker(model.value)
-    setRounds(createGameRounds())
-    setScores([])
+    setModeId(nextMode)
+    setRounds(MODES[nextMode].planRounds())
+    setResults([])
     setGameId((g) => g + 1)
     setStartup(null)
     setScreen('game')
@@ -93,11 +103,10 @@ export default function App() {
   const cancelStartup = () => {
     attempt.current++
     setStartup(null)
-    setScreen('welcome')
   }
 
-  const handleComplete = useCallback((finalScores: number[]) => {
-    setScores(finalScores)
+  const handleComplete = useCallback((finalResults: RoundResult[]) => {
+    setResults(finalResults)
     setStream(null)
     setScreen('results')
     sounds.fanfare()
@@ -105,7 +114,7 @@ export default function App() {
 
   const handleQuit = useCallback(() => {
     sounds.click()
-    setScores([])
+    setResults([])
     setStream(null)
     setScreen('welcome')
   }, [])
@@ -143,10 +152,20 @@ export default function App() {
           landmarker &&
           page(
             `game-${gameId}`,
-            <GameScreen stream={stream} landmarker={landmarker} rounds={rounds} onComplete={handleComplete} onQuit={handleQuit} />,
+            <GameScreen mode={mode} rounds={rounds} stream={stream} landmarker={landmarker} onComplete={handleComplete} onQuit={handleQuit} />,
           )}
         {screen === 'results' &&
-          page('results', <ResultsScreen rounds={rounds} scores={scores} onPlayAgain={startGame} starting={startup !== null} />)}
+          page(
+            `results-${gameId}`,
+            <ResultsScreen
+              mode={mode}
+              rounds={rounds}
+              results={results}
+              onPlayAgain={() => startGame(modeId)}
+              onMenu={() => setScreen('welcome')}
+              starting={startup !== null}
+            />,
+          )}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -156,7 +175,7 @@ export default function App() {
             camera={startup.camera}
             model={startup.model}
             error={startup.error}
-            onRetry={startGame}
+            onRetry={() => startGame(pendingMode.current)}
             onCancel={cancelStartup}
           />
         )}

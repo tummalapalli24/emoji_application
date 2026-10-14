@@ -1,5 +1,4 @@
 import { motion } from 'motion/react'
-import { roundReaction } from '../lib/scoring'
 
 /** Deterministic 0 to 1 jitter so the burst looks random but renders stably. */
 const jitter = (i: number, salt: number) => {
@@ -9,9 +8,21 @@ const jitter = (i: number, salt: number) => {
 
 const SPARK_COLORS = ['#AB0520', '#FFFFFF', '#E5EFF7', '#AB0520', '#1E5288']
 
-/** Energetic "+85 POINTS!" with a red/white spark burst. */
-export function PointsPopup({ points }: { points: number }) {
-  const count = points >= 45 ? 22 : 10
+interface Props {
+  /** Small line above the banner, e.g. "PERFECT!" */
+  headline: string
+  /** Big banner text, e.g. "+85 POINTS!" */
+  banner: string
+  /** Optional emoji shown above the headline (Mystery Face reveal). */
+  emoji?: string
+  tone?: 'red' | 'blue'
+  /** Bigger spark burst for great results. */
+  celebrate?: boolean
+}
+
+/** Energetic end-of-round banner with a red/white spark burst. */
+export function PointsPopup({ headline, banner, emoji, tone = 'red', celebrate = true }: Props) {
+  const count = celebrate ? 22 : 10
   const sparks = Array.from({ length: count }, (_, i) => {
     const angle = (Math.PI * 2 * i) / count + jitter(i, 1) * 0.3
     const distance = 170 + jitter(i, 2) * 150
@@ -32,7 +43,7 @@ export function PointsPopup({ points }: { points: number }) {
           initial={{ scale: 0, opacity: 0.8 }}
           animate={{ scale: 3.2, opacity: 0 }}
           transition={{ duration: 0.8, ease: 'easeOut' }}
-          className="absolute h-40 w-40 rounded-full border-8 border-az-red"
+          className={`absolute h-40 w-40 rounded-full border-8 ${tone === 'red' ? 'border-az-red' : 'border-azurite'}`}
         />
         {sparks.map((s) => (
           <motion.span
@@ -58,9 +69,14 @@ export function PointsPopup({ points }: { points: number }) {
           transition={{ duration: 1.8, times: [0, 0.18, 0.75, 1], ease: 'easeOut' }}
           className="relative text-center"
         >
-          <p className="font-display title-shadow text-3xl text-white md:text-5xl">{roundReaction(points)}</p>
-          <p className="font-display mt-2 inline-block rounded-3xl border-4 border-white bg-az-red px-6 py-2 text-5xl text-white shadow-[0_0_60px_rgba(171,5,32,0.9)] md:px-10 md:text-8xl">
-            +{points} POINTS!
+          {emoji && <div className="emoji mb-2 text-8xl drop-shadow-[0_14px_30px_rgba(0,0,0,0.5)] md:text-9xl">{emoji}</div>}
+          <p className="font-display title-shadow text-3xl text-white md:text-5xl">{headline}</p>
+          <p
+            className={`font-display mt-2 inline-block rounded-3xl border-4 border-white px-6 py-2 text-5xl text-white md:px-10 md:text-8xl ${
+              tone === 'red' ? 'bg-az-red shadow-[0_0_60px_rgba(171,5,32,0.9)]' : 'bg-azurite shadow-[0_0_60px_rgba(30,82,136,0.9)]'
+            }`}
+          >
+            {banner}
           </p>
         </motion.div>
       </div>

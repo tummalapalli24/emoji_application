@@ -36,3 +36,12 @@ export function loadFaceLandmarker(): Promise<FaceLandmarker> {
   }
   return landmarkerPromise
 }
+
+let configuredFaces = 1
+
+/** Switches how many faces the shared model tracks (Face-Off needs 2). */
+export async function setTrackedFaces(landmarker: FaceLandmarker, numFaces: number) {
+  if (numFaces === configuredFaces) return
+  await landmarker.setOptions({ numFaces })
+  configuredFaces = numFaces
+}
